@@ -12,7 +12,13 @@ tools/memory.py
 tools/formats.py
 tools/mac_agent.py
 tools/MemoryInbox.swift
+tools/intent.py
+tools/worker.py
+tools/brief.py
 tests/test_intake.py
+tests/test_intent.py
+tests/test_brief.py
+docs/设计思路.md
 examples/01-orchid.md
 examples/02-orchid.md
 vault/AGENTS.md

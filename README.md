@@ -4,7 +4,9 @@
 
 继续在你习惯的应用里聊。把导出的对话交给本地助手，或放进设置好的收件箱。下次想知道「我当时为什么改主意」，打开一篇主题笔记，就能看到当时谁提了建议、你怎么回应，以及每句话的出处。
 
-[使用这个模板](https://github.com/jianhong001/obsidian-memory-kit/generate) · [先看一次找回原话的结果](#一次找回原话的结果) · [让助手带我试](#让助手带我试)
+[使用这个模板](https://github.com/jianhong001/obsidian-memory-kit/generate) · [先看一次找回原话的结果](#一次找回原话的结果) · [让助手带我试](#让助手带我试) · [设计思路](docs/设计思路.md)
+
+> **English (short)**: A local-first Obsidian vault kit where an LLM keeps a wiki of what you actually said. Exports and inbox drops become sourced topic notes; `tools/intent.py` expands one Chinese sentence into a deterministic action plan; `tools/worker.py` files material and writes source pages; `tools/brief.py` reports what changed and what still needs *your* judgement. No cloud, no vendor lock-in — swap in any OpenAI-compatible model. Design rationale: [docs/设计思路.md](docs/设计思路.md).
 
 ## 一次找回原话的结果
 
@@ -53,6 +55,35 @@ printf '%s\n' "$demo"
 | Mac 上经常有新文件 | 首次安装收件箱任务，以后只把文件放进约定的文件夹 | 登录后每分钟检查一次，文件在两次检查中保持稳定才处理。分类不明或需要确认的条目留待核对。 |
 
 分类支持 **工作、学习、生活**。每条对话在本工具里归入一个主题；跨模型续聊时，同一个项目沿用相同的 `category` 和 `topic`。已有笔记和新生成的内容可以在 Obsidian 里继续编辑，手写感想放在「我的批注」区。个人库请放在公开仓库之外。
+
+## 一句话 → 确定清单 → 自动归档
+
+对话导入解决「找回原话」。如果你还想让**别的杂乱材料**（网页剪藏、PDF、截图、导出包）也自动进库，用这一组命令。它们只依赖 Python 标准库；模型只在填空处出现（这段讲什么、归哪个主题），判断留给你。
+
+```sh
+# 1) 看看一句话会被展开成什么（不写任何文件）
+python3 tools/intent.py "收一下这周的"
+python3 tools/intent.py "找点东西 毕业论文" --json
+
+# 2) 正式处理收件箱：归档 + 生成来源页 + 更新索引与日志 + 自检
+python3 tools/worker.py --once
+python3 tools/worker.py --budget        # 本月已用费用
+
+# 3) 每日简报：库内版，以及只含计数与目录的外部通道版
+python3 tools/brief.py
+python3 tools/brief.py --feishu
+python3 tools/brief.py --decide 2 同意  # 处理待决清单第 2 条
+```
+
+| 文件 | 为什么这样拆 |
+|---|---|
+| `tools/intent.py` | 同一句话永远展开成同一个候选清单；未命中就明确返回 `unhandled`，不猜 |
+| `tools/worker.py` | 只做「可撤销」的写入；命中凭据模式跳过；每月费用上限默认 50 元，超限停止调用模型 |
+| `tools/brief.py` | 自动化的产出必须便宜到能每天看：几行计数 + 一份待决清单 |
+
+`worker.py` 需要模型时读取环境变量 `DEEPSEEK_API_KEY`（或任意兼容接口，改 `WORKER_MODEL` 与价格变量）。没有 key 也能跑：它会完成归档与检查，只跳过摘要与来源页。
+
+默认收件箱：`~/Documents/模型对话收件箱`；状态与费用账本：`~/.local/share/obsidian-memory-kit/worker`（可用 `WORKER_INBOX`、`WORKER_STATE` 覆盖）。
 
 ## 日常使用
 
